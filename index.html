@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+    <style>
+        body {
+          font-family: 'Arial', sans-serif;
+          background-color: #f8f9fa;
+          margin: 0;
+          padding: 20px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+          color: #333;
+        }
+      
+        .container {
+          background-color: #fff;
+          border-radius: 8px;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+          padding: 20px;
+          max-width: 500px;
+          width: 100%;
+          margin: auto;
+        }
+      
+        h1 {
+          font-size: 24px;
+          text-align: center;
+          color: #0d6efd;
+          margin-bottom: 20px;
+        }
+      
+        #fileInput {
+          width: 100%;
+          margin-bottom: 20px;
+          padding: 10px;
+          border: 1px solid #ced4da;
+          border-radius: 4px;
+          background-color: #e9ecef;
+          cursor: pointer;
+        }
+      
+        #generateButton {
+          display: block;
+          width: 100%;
+          background-color: #0d6efd;
+          color: #fff;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 4px;
+          font-size: 16px;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+      
+        #generateButton:hover {
+          background-color: #0b5ed7;
+        }
+      
+        #generateButton:active {
+          background-color: #0a58ca;
+        }
+      
+        #generateButton:focus {
+          outline: none;
+          box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+      </style>
+      
+<head>
+    <title>Glossary Generator</title>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Glossary Generator</h1>
+        <input type="file" id="fileInput" multiple accept=".po">
+        <button id="generateButton">Create Glossary</button>
+    </div>
+
+    <script>
+    document.getElementById('generateButton').addEventListener('click', function() {
+    let files = document.getElementById('fileInput').files;
+    if (files.length === 0) {
+        alert('Please upload one or more .po files.');
+        return;
+    }
+
+    let wordCountMap = new Map();
+    let filesProcessed = 0;
+    // List of common words to exclude
+    const commonWords = new Set(['a', 'an', 'the', 'of', 'and', 'in', 'to', 'on', 'at', 'for', 'with', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'by', 'through', 'during', 'before', 'after', 'above', 'below', 'from', 'up', 'down', 'out', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don', 'should', 'now']);
+
+    Array.from(files).forEach(file => {
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            let content = e.target.result;
+
+            // Extract and count words from 'msgid' lines
+            let lines = content.split('\n');
+            for (let line of lines) {
+                if (line.startsWith('msgid')) {
+                    let message = line.replace('msgid', '').replace(/["']/g, '').trim();
+                    // Remove content within angle brackets
+                    message = message.replace(/<[^>]*>/g, '');
+                    let words = message.split(/\s+/);
+                    words.forEach(word => {
+                        let cleanWord = word.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '').toLowerCase();
+                        if (cleanWord && !commonWords.has(cleanWord)) {
+                            wordCountMap.set(cleanWord, (wordCountMap.get(cleanWord) || 0) + 1);
+                        }
+                    });
+                }
+            }
+
+            filesProcessed++;
+            if (filesProcessed === files.length) {
+                // Generate CSV sorted by frequency
+                let sortedWords = Array.from(wordCountMap.entries()).sort((a, b) => b[1] - a[1]);
+                let csvContent = 'data:text/csv;charset=utf-8,Word,Frequency\n';
+                sortedWords.forEach(([word, count]) => {
+                    csvContent += `${word},${count}\n`;
+                });
+
+                // Trigger download
+                let encodedUri = encodeURI(csvContent);
+                let link = document.createElement('a');
+                link.setAttribute('href', encodedUri);
+                link.setAttribute('download', 'Glossary.csv');
+                document.body.appendChild(link); // Required for Firefox
+                link.click();
+                document.body.removeChild(link);
+            }
+        };
+        reader.readAsText(file);
+    });
+});
+
+    </script>
+</body>
+
+</html>
